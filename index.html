@@ -1,4 +1,4 @@
-html_code = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -9,58 +9,44 @@ html_code = """<!DOCTYPE html>
         body { font-family: sans-serif; padding: 15px; background: #f5f5f5; color: #333; }
         .container { max-width: 500px; margin: 0 auto; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; }
         h1 { text-align: center; font-size: 18px; color: #2c3e50; margin-bottom: 15px; }
-        
         .group { border: 1px solid #ddd; padding: 12px; border-radius: 6px; background: #fafafa; margin-bottom: 10px; }
-        h3 { font-size: 13px; color: #34495e; margin-bottom: 5px; }
         label { display: block; margin-top: 6px; font-weight: bold; font-size: 12px; }
         select { width: 100%; padding: 6px; margin-top: 3px; border: 1px solid #ccc; border-radius: 4px; font-size: 12px; background: white; }
-        
-        /* メインメーター表示 */
         .display-panel { text-align: center; background: #2c3e50; color: white; padding: 12px; border-radius: 6px; margin-bottom: 12px; }
         .ph-value { font-size: 32px; font-weight: bold; color: #2ecc71; font-family: monospace; }
         .drip-value { font-size: 14px; margin-top: 4px; color: #bdc3c7; }
-        
-        /* スライダー（カーソル操作） */
         .slider-group { background: #eef2f3; padding: 12px; border-radius: 6px; margin-bottom: 12px; text-align: center; }
         .slider-label { font-size: 13px; font-weight: bold; color: #2980b9; margin-bottom: 6px; display: block; }
         input[type="range"] { width: 100%; margin: 8px 0; cursor: pointer; }
-        
-        /* ビーカー視覚化 */
         .beaker-area { display: flex; justify-content: center; align-items: center; gap: 10px; font-size: 13px; margin-bottom: 12px; }
         .beaker { width: 50px; height: 50px; border: 2px solid #7f8c8d; border-top: none; border-radius: 0 0 6px 6px; position: relative; background: #fff; }
-        .liquid { position: absolute; bottom: 0; left: 0; right: 0; height: 32px; background: rgba(224,224,224,0.5); transition: background 0.1s; border-radius: 0 0 4px 4px; }
-        
+        .liquid { position: absolute; bottom: 0; left: 0; right: 0; height: 32px; background: rgba(224,224,224,0.5); border-radius: 0 0 4px 4px; }
         canvas { background: #ffffff; border: 1px solid #ccc; width: 100% !important; height: auto !important; aspect-ratio: 1.4 / 1; display: block; }
     </style>
 </head>
 <body>
 <div class="container">
     <h1>中和滴定シミュレータ</h1>
-    
     <div class="display-panel">
         <div class="ph-value" id="phDisplay">7.00</div>
         <div class="drip-value" id="dripDisplay">滴下量: 0.00 mL</div>
     </div>
-
     <div class="slider-group">
-        <span class="slider-label">🎛️ ビュレットの活栓（カーソルで滴下量を調整）</span>
+        <span class="slider-label">🎛️ カーソルで滴下量を調整</span>
         <input type="range" id="dripSlider" min="0" max="20" step="0.05" value="0">
     </div>
-
     <div class="group">
-        <label style="color: #2980b9;">🧪 対象の酸（10mL固定）</label>
+        <label style="color: #2980b9;">🧪 対象の酸（10mL）</label>
         <select id="acidType">
             <option value="hcl">塩酸 (強酸)</option>
             <option value="ch3cooh">酢酸 (弱酸)</option>
         </select>
-        
-        <label style="color: #27ae60;">濃度設定 (酸・塩基共通)</label>
+        <label style="color: #27ae60;">濃度設定</label>
         <select id="concSelect">
             <option value="0.10">0.10 mol/L</option>
             <option value="0.05">0.05 mol/L</option>
             <option value="0.01">0.01 mol/L</option>
         </select>
-
         <label style="color: #e67e22;">🎨 指示薬の選択</label>
         <select id="indicatorType">
             <option value="pp">フェノールフタレイン</option>
@@ -68,15 +54,12 @@ html_code = """<!DOCTYPE html>
             <option value="none">なし</option>
         </select>
     </div>
-
     <div class="beaker-area">
         <div>ビーカー内の色：</div>
         <div class="beaker"><div id="beakerLiquid" class="liquid"></div></div>
     </div>
-
     <canvas id="titrationCanvas" width="400" height="280"></canvas>
 </div>
-
 <script>
     function getIndicatorColor(type, pH) {
         if (type === 'pp') {
@@ -90,86 +73,52 @@ html_code = """<!DOCTYPE html>
         }
         return 'rgba(224, 224, 224, 0.4)';
     }
-
     function calculatepH(acidType, conc, dripVol) {
-        const Ka = 1.8e-5;
-        const bkV = 10.0;
-        let n_acid = conc * (bkV / 1000);
-        let n_base = conc * (dripVol / 1000);
+        const Ka = 1.8e-5; const bkV = 10.0;
+        let n_acid = conc * (bkV / 1000); let n_base = conc * (dripVol / 1000);
         let totalVolL = (bkV + parseFloat(dripVol)) / 1000;
-
         if (acidType === 'hcl') {
             if (n_acid > n_base) return -Math.log10((n_acid - n_base) / totalVolL);
             if (n_base > n_acid) return 14 + Math.log10((n_base - n_acid) / totalVolL);
             return 7.0;
         } else {
             if (dripVol == 0) return -Math.log10(Math.sqrt(Ka * conc));
-            if (n_acid > n_base) {
-                return -Math.log10(Ka) + Math.log10(n_base / (n_acid - n_base));
-            } else if (n_base > n_acid) {
-                return 14 + Math.log10((n_base - n_acid) / totalVolL);
-            }
+            if (n_acid > n_base) return -Math.log10(Ka) + Math.log10(n_base / (n_acid - n_base));
+            else if (n_base > n_acid) return 14 + Math.log10((n_base - n_acid) / totalVolL);
             return 7.0 + 0.5 * (-Math.log10(Ka) + Math.log10(n_acid / totalVolL));
         }
     }
-
     function render() {
-        const canvas = document.getElementById('titrationCanvas');
-        const ctx = canvas.getContext('2d');
-        const w = canvas.width, h = canvas.height;
-        const pL = 35, pR = 15, pT = 15, pB = 30, gW = w - pL - pR, gH = h - pT - pB;
-
-        const acidType = document.getElementById('acidType').value;
-        const conc = parseFloat(document.getElementById('concSelect').value);
-        const currentDrip = parseFloat(document.getElementById('dripSlider').value);
-        const indicator = document.getElementById('indicatorType').value;
-
+        const canvas = document.getElementById('titrationCanvas'); const ctx = canvas.getContext('2d');
+        const w = canvas.width, h = canvas.height; const pL = 35, pR = 15, pT = 15, pB = 30, gW = w - pL - pR, gH = h - pT - pB;
+        const acidType = document.getElementById('acidType').value; const conc = parseFloat(document.getElementById('concSelect').value);
+        const currentDrip = parseFloat(document.getElementById('dripSlider').value); const indicator = document.getElementById('indicatorType').value;
         const currentpH = calculatepH(acidType, conc, currentDrip);
-
-        // 数値と色の表示更新
         document.getElementById('phDisplay').innerText = currentpH.toFixed(2);
         document.getElementById('dripDisplay').innerText = `滴下量: ${currentDrip.toFixed(2)} mL`;
         document.getElementById('beakerLiquid').style.backgroundColor = getIndicatorColor(indicator, currentpH);
-
-        ctx.clearRect(0, 0, w, h);
-        ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 1; ctx.font = '11px sans-serif';
-
-        // グリッド線
+        ctx.clearRect(0, 0, w, h); ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 1; ctx.font = '11px sans-serif';
         for (let i = 0; i <= 14; i += 2) {
-            let y = pT + gH - (i / 14) * gH;
-            ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(w - pR, y); ctx.stroke();
+            let y = pT + gH - (i / 14) * gH; ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(w - pR, y); ctx.stroke();
             ctx.fillStyle = '#666'; ctx.textAlign = 'right'; ctx.fillText(i, pL - 6, y + 4);
         }
         for (let i = 0; i <= 20; i += 5) {
-            let x = pL + (i / 20) * gW;
-            ctx.beginPath(); ctx.moveTo(x, pT); ctx.lineTo(x, h - pB); ctx.stroke();
+            let x = pL + (i / 20) * gW; ctx.beginPath(); ctx.moveTo(x, pT); ctx.lineTo(x, h - pB); ctx.stroke();
             ctx.fillStyle = '#666'; ctx.textAlign = 'center'; ctx.fillText(i, x, h - pB + 14);
         }
-
-        // 滴定曲線全体のプロット
         ctx.strokeStyle = '#bdc3c7'; ctx.lineWidth = 2; ctx.beginPath();
         for (let v = 0; v <= 20; v += 0.1) {
-            let ph = calculatepH(acidType, conc, v);
-            let x = pL + (v / 20) * gW, y = pT + gH - (ph / 14) * gH;
+            let ph = calculatepH(acidType, conc, v); let x = pL + (v / 20) * gW, y = pT + gH - (ph / 14) * gH;
             if (v === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
         }
         ctx.stroke();
-
-        // 現在のカーソル位置の点（トラッカー赤丸）
-        let cx = pL + (currentDrip / 20) * gW;
-        let cy = pT + gH - (currentpH / 14) * gH;
+        let cx = pL + (currentDrip / 20) * gW; let cy = pT + gH - (currentpH / 14) * gH;
         ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(cx, cy, 5, 0, 2 * Math.PI); ctx.fill();
     }
-
     document.querySelectorAll('input, select').forEach(el => {
-        el.addEventListener('input', render);
-        el.addEventListener('change', render);
+        el.addEventListener('input', render); el.addEventListener('change', render);
     });
-
     window.onload = render;
 </script>
 </body>
-</html>"""
-
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html_code)
+</html>
