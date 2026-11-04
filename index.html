@@ -1,237 +1,171 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>中和滴定インタラクティブシミュレータ</title>
-    <style>
-        body { font-family: sans-serif; margin: 20px; background: #f5f5f5; color: #333; }
-        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { text-align: center; font-size: 24px; color: #2c3e50; }
-        .controls { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
-        .control-group { border: 1px solid #ddd; padding: 15px; border-radius: 6px; background: #fafafa; }
-        label { display: block; margin-top: 10px; font-weight: bold; }
-        select, input { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-        
-        /* ボタンとステータス表示 */
-        .action-area { text-align: center; margin: 20px 0; padding: 15px; background: #eef2f3; border-radius: 6px; }
-        .btn { background: #3498db; color: white; border: none; padding: 12px 30px; font-size: 16px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: background 0.2s; margin: 0 5px; }
-        .btn:hover { background: #2980b9; }
-        .btn:disabled { background: #bdc3c7; cursor: not-allowed; }
-        .btn-reset { background: #e74c3c; }
-        .btn-reset:hover { background: #c0392b; }
-        .status-text { font-size: 18px; font-weight: bold; margin-top: 10px; color: #2c3e50; }
-
-        .chart-container { text-align: center; margin-top: 20px; }
-        canvas { background: #ffffff; border: 1px solid #ccc; max-width: 100%; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>中和滴定</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:sans-serif;padding:10px;background:#f5f5f5;}
+.box{max-width:340px;margin:0 auto;background:#fff;padding:12px;border-radius:8px;}
+h1{text-align:center;font-size:16px;margin-bottom:10px;}
+.group{border:1px solid #ddd;padding:8px;border-radius:6px;background:#fafafa;margin-bottom:8px;}
+label{display:block;margin-top:6px;font-weight:bold;font-size:12px;}
+select,input{width:100%;padding:5px;margin-top:3px;border:1px solid #ccc;border-radius:4px;font-size:12px;}
+.view{display:flex;justify-content:center;align-items:center;gap:10px;margin:10px 0;font-size:12px;}
+.beaker{width:50px;height:50px;border:2px solid #7f8c8d;border-top:none;border-radius:0 0 6px 6px;position:relative;background:#fff;}
+.water{position:absolute;bottom:0;left:0;right:0;height:30px;background:#e0e0e0;border-radius:0 0 4px 4px;opacity:0.7;}
+.area{text-align:center;margin:8px 0;padding:8px;background:#eef2f3;border-radius:6px;}
+.btn{background:#3498db;color:#fff;border:none;padding:6px 12px;font-size:12px;font-weight:bold;border-radius:4px;cursor:pointer;}
+.btn-r{background:#e74c3c;}
+.txt{font-size:12px;font-weight:bold;margin-top:6px;}
+canvas{background:#fff;border:1px solid #ccc;width:100%!important;height:auto!important;aspect-ratio:1.2/1;display:block;}
+</style>
 </head>
 <body>
-
-<div class="container">
-    <h1>中和滴定シミュレータ (通信エラー対策版)</h1>
-    
-    <div class="controls">
-        <!-- 滴定パターンの選択 -->
-        <div class="control-group" style="grid-column: span 2;">
-            <label style="font-size: 16px; color: #2980b9;">🧪 実験パターンの選択</label>
-            <select id="titrationMode" style="font-size: 15px; border: 2px solid #2980b9;">
-                <option value="acid_by_base">酸を塩基で滴定する（ビーカー：酸 ／ ビュレット：塩基）</option>
-                <option value="base_by_acid">塩基を酸で滴定する（ビーカー：塩基 ／ ビュレット：酸）</option>
-            </select>
-        </div>
-
-        <!-- ビーカー側の設定 -->
-        <div class="control-group">
-            <h3 id="beakerTitle">コニカルビーカーの中身（溶液）</h3>
-            <label>強さの選択</label>
-            <select id="beakerType">
-                <option value="strong">強（例: HCl / NaOH）</option>
-                <option value="weak">弱（例: CH3COOH / NH3）</option>
-            </select>
-            <label>濃度 (mol/L)</label>
-            <input type="number" id="beakerConc" value="0.1" step="0.01" min="0.001">
-            <label>体積 (mL)</label>
-            <input type="number" id="beakerVol" value="10" step="1" min="1">
-        </div>
-
-        <!-- ビュレット側の設定 -->
-        <div class="control-group">
-            <h3 id="buretTitle">ビュレットの中身（滴下する液）</h3>
-            <label>強さの選択</label>
-            <select id="buretType">
-                <option value="strong">強（例: NaOH / HCl）</option>
-                <option value="weak">弱（例: NH3 / CH3COOH）</option>
-            </select>
-            <label>濃度 (mol/L)</label>
-            <input type="number" id="buretConc" value="0.1" step="0.01" min="0.001">
-        </div>
-    </div>
-
-    <!-- 操作ボタンエリア -->
-    <div class="action-area">
-        <button id="startBtn" class="btn">▶ 滴定スタート</button>
-        <button id="resetBtn" class="btn btn-reset">🔄 リセット</button>
-        <div id="statusDisplay" class="status-text">滴下量: 0.0 mL | 現在のpH: --</div>
-    </div>
-
-    <div class="chart-container">
-        <canvas id="titrationCanvas" width="800" height="400"></canvas>
-    </div>
+<div class="box">
+<h1>中和滴定シミュレータ</h1>
+<div class="group">
+<label style="color:#2980b9;">🧪 実験パターン</label>
+<select id="mode">
+<option value="a_b">酸を塩基で滴定</option>
+<option value="b_a">塩基を酸で滴定</option>
+</select>
+<label style="color:#e67e22;">🎨 指示薬</label>
+<select id="ind">
+<option value="none">なし</option>
+<option value="pp">フェノールフタレイン</option>
+<option value="mo">メチルオレンジ</option>
+</select>
 </div>
-
+<div class="group">
+<h3 style="font-size:12px;">ビーカーの中身</h3>
+<label>強さ</label><select id="bkT"><option value="s">強</option><option value="w">弱</option></select>
+<label>濃度(mol/L)</label><input type="number" id="bkC" value="0.1" step="0.01">
+<label>体積(mL)</label><input type="number" id="bkV" value="10" step="1">
+</div>
+<div class="group">
+<h3 style="font-size:12px;">ビュレットの中身</h3>
+<label>強さ</label><select id="brT"><option value="s">強</option><option value="w">弱</option></select>
+<label>濃度(mol/L)</label><input type="number" id="brC" value="0.1" step="0.01">
+</div>
+<div class="view">
+<div>液の色：</div>
+<div class="beaker"><div id="liquid" class="water"></div></div>
+</div>
+<div class="area">
+<button id="go" class="btn">▶ スタート</button>
+<button id="reset" class="btn btn-r">🔄 リセット</button>
+<div id="status" class="txt">滴下: 0.0mL | pH: --</div>
+</div>
+<canvas id="cv" width="400" height="340"></canvas>
+</div>
 <script>
-    let animationInterval;
-    let currentDrip = 0;
-    const maxDrip = 25; 
-    const step = 0.2;   
-    let dataPoints = []; // 描画したデータを記録する配列
-
-    // モード切り替え
-    document.getElementById('titrationMode').addEventListener('change', function() {
-        const mode = this.value;
-        if (mode === 'acid_by_base') {
-            document.getElementById('beakerTitle').innerText = "コニカルビーカーの中身（酸）";
-            document.getElementById('buretTitle').innerText = "ビュレットの中身（塩基）";
-        } else {
-            document.getElementById('beakerTitle').innerText = "コニカルビーカーの中身（塩基）";
-            document.getElementById('buretTitle').innerText = "ビュレットの中身（酸）";
-        }
-        resetSimulation();
-    });
-
-    // pH計算ロジック
-    function calculatepH(mode, beakerType, beakerConc, beakerVol, buretType, buretConc, buretAddedVol) {
-        const molBeaker = beakerConc * (beakerVol / 1000);
-        const molBuret = buretConc * (buretAddedVol / 1000);
-        const totalVolL = (parseFloat(beakerVol) + parseFloat(buretAddedVol)) / 1000;
-
-        let pH = 7;
-
-        if (mode === 'acid_by_base') {
-            if (beakerType === 'strong' && buretType === 'strong') {
-                if (molBeaker > molBuret) {
-                    pH = -Math.log10((molBeaker - molBuret) / totalVolL);
-                } else if (molBuret > molBeaker) {
-                    pH = 14 + Math.log10((molBuret - molBeaker) / totalVolL);
-                }
-            } else if (beakerType === 'weak' && buretType === 'strong') {
-                if (buretAddedVol === 0) pH = 0.5 * (3.0 - Math.log10(beakerConc));
-                else if (molBeaker > molBuret) pH = 3.0 + Math.log10(molBuret / (molBeaker - molBuret));
-                else if (molBeaker === molBuret) pH = 8.5;
-                else pH = 14 + Math.log10((molBuret - molBeaker) / totalVolL);
-            } else {
-                pH = molBeaker > molBuret ? 2.5 : 11.5;
-            }
-        } else {
-            if (beakerType === 'strong' && buretType === 'strong') {
-                if (molBeaker > molBuret) {
-                    pH = 14 + Math.log10((molBeaker - molBuret) / totalVolL);
-                } else if (molBuret > molBeaker) {
-                    pH = -Math.log10((molBuret - molBeaker) / totalVolL);
-                }
-            } else if (beakerType === 'weak' && buretType === 'strong') {
-                if (buretAddedVol === 0) pH = 14 - (0.5 * (3.0 - Math.log10(beakerConc)));
-                else if (molBeaker > molBuret) pH = (14 - 3.0) - Math.log10(molBuret / (molBeaker - molBuret));
-                else if (molBeaker === molBuret) pH = 5.5;
-                else pH = -Math.log10((molBuret - molBeaker) / totalVolL);
-            } else {
-                pH = molBeaker > molBuret ? 11.5 : 2.5;
-            }
-        }
-        return Math.max(0, Math.min(14, pH));
-    }
-
-    // Canvasを使った手動グラフ描画処理（外部ライブラリ不使用）
-    function drawGraph() {
-        const canvas = document.getElementById('titrationCanvas');
-        const ctx = canvas.getContext('2d');
-        const width = canvas.width;
-        const height = canvas.height;
-        
-        const paddingLeft = 60;
-        const paddingRight = 40;
-        const paddingTop = 30;
-        const paddingBottom = 40;
-
-        const graphWidth = width - paddingLeft - paddingRight;
-        const graphHeight = height - paddingTop - paddingBottom;
-
-        ctx.clearRect(0, 0, width, height);
-
-        // 背景のグリッドと軸
-        ctx.strokeStyle = '#e0e0e0';
-        ctx.lineWidth = 1;
-        
-        // Y軸目盛 (pH 0〜14)
-        for (let i = 0; i <= 14; i += 2) {
-            const y = paddingTop + graphHeight - (i / 14) * graphHeight;
-            ctx.beginPath();
-            ctx.moveTo(paddingLeft, y);
-            ctx.lineTo(width - paddingRight, y);
-            ctx.stroke();
-            
-            ctx.fillStyle = '#333';
-            ctx.font = '12px sans-serif';
-            ctx.textAlign = 'right';
-            ctx.fillText(i, paddingLeft - 10, y + 4);
-        }
-
-        // X軸目盛 (滴下量 0〜25 mL)
-        for (let i = 0; i <= maxDrip; i += 5) {
-            const x = paddingLeft + (i / maxDrip) * graphWidth;
-            ctx.beginPath();
-            ctx.moveTo(x, paddingTop);
-            ctx.lineTo(x, height - paddingBottom);
-            ctx.stroke();
-            
-            ctx.fillStyle = '#333';
-            ctx.font = '12px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.fillText(i + ' mL', x, height - paddingBottom + 20);
-        }
-
-        // 軸ラベル
-        ctx.save();
-        ctx.translate(20, height / 2);
-        ctx.rotate(-Math.PI / 2);
-        ctx.fillText('pH', 0, 0);
-        ctx.restore();
-
-        // データのプロット線
-        if (dataPoints.length > 0) {
-            ctx.strokeStyle = '#2ecc71';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-
-            for (let i = 0; i < dataPoints.length; i++) {
-                const pt = dataPoints[i];
-                const x = paddingLeft + (pt.x / maxDrip) * graphWidth;
-                const y = paddingTop + graphHeight - (pt.y / 14) * graphHeight;
-
-                if (i === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            }
-            ctx.stroke();
-
-            // 現在の先端の点を赤く大きく描画
-            const lastPt = dataPoints[dataPoints.length - 1];
-            const lastX = paddingLeft + (lastPt.x / maxDrip) * graphWidth;
-            const lastY = paddingTop + graphHeight - (lastPt.y / 14) * graphHeight;
-            ctx.fillStyle = '#e74c3c';
-            ctx.beginPath();
-            ctx.arc(lastX, lastY, 6, 0, 2 * Math.PI);
-            ctx.fill();
-        }
-    }
-
-    // 滴定シミュレーションの開始
-    function startSimulation() {
-        document.getElementById('startBtn').disabled = true;
-        document.querySelectorAll('input, select').forEach(el => el.disabled = true);
-
-        const mode = document.getElementById('titrationMode').value;
-        const beakerType = document.getElementById('beakerType').value;
-        const beakerConc = parseFloat(document.getElementById('beakerConc').value);
-        const beakerVol = parseFloat(document.getElementById('beakerVol').value);
-        const buretType = document.getElementById('buretType').value;
+let timer=null,drip=0,max=25,step=0.2,pts=[];
+document.getElementById('mode').addEventListener('change',function(){
+resetSim();
+});
+function getColor(type,pH){
+if(type==='pp'){
+if(pH<8.3)return 'rgba(255,255,255,0.7)';
+if(pH>10.0)return 'rgba(255,20,147,0.8)';
+return `rgba(255,20,147,${0.1+((pH-8.3)/1.7)*0.7})`;
+}else if(type==='mo'){
+if(pH<3.1)return 'rgba(255,69,0,0.8)';
+if(pH>4.4)return 'rgba(255,215,0,0.8)';
+return 'rgba(255,140,0,0.8)';
+}
+return 'rgba(224,224,224,0.5)';
+}
+function getpH(mode,bkT,bkC,bkV,brT,brC,addV){
+let mBk=bkC*(bkV/1000),mBr=brC*(addV/1000);
+let tot=(parseFloat(bkV)+parseFloat(addV))/1000,pH=7;
+if(mode==='a_b'){
+if(bkT==='s'&&brT==='s'){
+if(mBk>mBr)pH=-Math.log10((mBk-mBr)/tot);
+else if(mBr>mBk)pH=14+Math.log10((mBr-mBk)/tot);
+}else{
+if(addV===0)pH=0.5*(3.0-Math.log10(bkC));
+else if(mBk>mBr)pH=3.0+Math.log10(mBr/(mBk-mBr));
+else if(mBk===mBr)pH=8.5;
+else pH=14+Math.log10((mBr-mBk)/tot);
+}
+}else{
+if(bkT==='s'&&brT==='s'){
+if(mBk>mBr)pH=14+Math.log10((mBk-mBr)/tot);
+else if(mBr>mBk)pH=-Math.log10((mBr-mBk)/tot);
+}else{
+if(addV===0)pH=14-(0.5*(3.0-Math.log10(bkC)));
+else if(mBk>mBr)pH=11.0-Math.log10(mBr/(mBk-mBr));
+else if(mBk===mBr)pH=5.5;
+else pH=-Math.log10((mBr-mBk)/tot);
+}
+}
+return Math.max(0,Math.min(14,pH));
+}
+function draw(){
+const c=document.getElementById('cv');if(!c)return;
+const ctx=c.getContext('2d'),w=c.width,h=c.height;
+const pL=40,pR=15,pT=15,pB=30,gW=w-pL-pR,gH=h-pT-pB;
+ctx.clearRect(0,0,w,h);
+ctx.strokeStyle='#e0e0e0';ctx.lineWidth=1;ctx.font='12px sans-serif';
+for(let i=0;i<=14;i+=2){
+let y=pT+gH-(i/14)*gH;
+ctx.beginPath();ctx.moveTo(pL,y);ctx.lineTo(w-pR,y);ctx.stroke();
+ctx.fillStyle='#333';ctx.textAlign='right';ctx.fillText(i,pL-8,y+4);
+}
+for(let i=0;i<=max;i+=5){
+let x=pL+(i/max)*gW;
+ctx.beginPath();ctx.moveTo(x,pT);ctx.lineTo(x,h-pB);ctx.stroke();
+ctx.fillStyle='#333';ctx.textAlign='center';ctx.fillText(i+'m',x,h-pB+14);
+}
+if(pts.length>0){
+ctx.strokeStyle='#2ecc71';ctx.lineWidth=3;ctx.beginPath();
+for(let i=0;i<pts.length;i++){
+let x=pL+(pts[i].x/max)*gW,y=pT+gH-(pts[i].y/14)*gH;
+if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+}
+ctx.stroke();
+let last=pts[pts.length-1];
+let lx=pL+(last.x/max)*gW,ly=pT+gH-(last.y/14)*gH;
+ctx.fillStyle='#e74c3c';ctx.beginPath();ctx.arc(lx,ly,5,0,2*Math.PI);ctx.fill();
+}
+}
+function sim(){
+document.getElementById('go').disabled=true;
+document.querySelectorAll('input,select').forEach(el=>el.disabled=true);
+const md=document.getElementById('mode').value;
+const ind=document.getElementById('ind').value;
+const bkT=document.getElementById('bkT').value;
+const bkC=parseFloat(document.getElementById('bkC').value)||0.1;
+const bkV=parseFloat(document.getElementById('bkV').value)||10;
+const brT=document.getElementById('brT').value;
+const brC=parseFloat(document.getElementById('brC').value)||0.1;
+if(timer)clearInterval(timer);
+timer=setInterval(()=>{
+if(drip>max){clearInterval(timer);return;}
+const pH=getpH(md,bkT,bkC,bkV,brT,brC,drip);
+pts.push({x:drip,y:pH});draw();
+document.getElementById('liquid').style.backgroundColor=getColor(ind,pH);
+document.getElementById('status').innerText=`滴下:${drip.toFixed(1)}mL|pH:${pH.toFixed(2)}`;
+drip+=step;
+},40);
+}
+function resetSim(){
+if(timer)clearInterval(timer);
+drip=0;pts=[];
+document.getElementById('go').disabled=false;
+document.querySelectorAll('input,select').forEach(el=>el.disabled=false);
+document.getElementById('status').innerText=`滴下: 0.0mL | pH: --`;
+document.getElementById('liquid').style.backgroundColor='rgba(224,224,224,0.5)';
+draw();
+}
+document.getElementById('go').addEventListener('click',sim);
+document.getElementById('reset').addEventListener('click',resetSim);
+document.querySelectorAll('input,select').forEach(el=>{
+if(el.id!=='mode')el.addEventListener('input',resetSim);
+});
+window.onload=function(){resetSim();};
+</script>
+</body>
+</html>
