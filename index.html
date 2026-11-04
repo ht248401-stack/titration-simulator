@@ -1,245 +1,154 @@
-<!DOCTYPE html>
-<html>
+html_code = """<!DOCTYPE html>
+<html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" 
-content="width=device-width,
-initial-scale=1.0">
-<title>中和滴定</title>
-<style>
-*{box-sizing:border-box;
-margin:0;padding:0;}
-body{
-font-family:sans-serif;
-padding:10px;
-background:#f5f5f5;}
-.box{max-width:100%;
-margin:0 auto;
-background:#fff;
-padding:12px;
-border-radius:8px;}
-h1{text-align:center;
-font-size:16px;
-margin-bottom:10px;}
-.group{
-border:1px solid #ddd;
-padding:8px;
-border-radius:6px;
-background:#fafafa;
-margin-bottom:8px;}
-label{display:block;
-margin-top:6px;
-font-weight:bold;
-font-size:12px;}
-select,input{
-width:100%;padding:5px;
-margin-top:3px;
-border:1px solid #ccc;
-border-radius:4px;
-font-size:12px;}
-.area{text-align:center;
-margin-top:10px;
-width:100%;}
-canvas{background:#fff;
-border:1px solid #ccc;
-width:100%!important;
-height:auto!important;
-aspect-ratio:1.4/1;
-display:block;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中和滴定シミュレータ</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { font-family: sans-serif; margin: 0; padding: 15px; background: #f5f5f5; color: #333; }
+        .container { max-width: 700px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); width: 100%; }
+        h1 { text-align: center; font-size: 20px; color: #2c3e50; margin-bottom: 20px; }
+        .controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .control-group { border: 1px solid #ddd; padding: 15px; border-radius: 6px; background: #fafafa; }
+        .full-width { grid-column: 1 / -1; }
+        label { display: block; margin-top: 10px; font-weight: bold; font-size: 14px; }
+        select, input { width: 100%; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        .chart-container { text-align: center; margin-top: 20px; width: 100%; }
+        canvas { background: #ffffff; border: 1px solid #ccc; width: 100% !important; height: auto !important; aspect-ratio: 1.5 / 1; max-width: 100%; display: block; margin: 0 auto; }
+    </style>
 </head>
 <body>
-<div class="box">
-<h1>中和滴定</h1>
-<div class="group">
-<label style="color:#2980b9;">
-🧪 実験パターン
-</label>
-<select id="mode">
-<option value="a_b">
-酸を塩基で滴定
-</option>
-<option value="b_a">
-塩基を酸で滴定
-</option>
-</select>
-</div>
-<div class="group">
-<h3 id="bkTitle" 
-style="font-size:12px;">
-ビーカー（酸）
-</h3>
-<label>溶液の種類</label>
-<select id="bkT">
-<option value="s">強</option>
-<option value="w">弱</option>
-</select>
-<label>濃度(mol/L)</label>
-<input type="number" 
-id="bkC" value="0.10" 
-step="0.01">
-<label>体積(mL)</label>
-<input type="number" 
-id="bkV" value="10.0" 
-step="0.5">
-</div>
-<div class="group">
-<h3 id="brTitle" 
-style="font-size:12px;">
-ビュレット（塩基）
-</h3>
-<label>溶液の種類</label>
-<select id="brT">
-<option value="s">強</option>
-<option value="w">弱</option>
-</select>
-<label>濃度(mol/L)</label>
-<input type="number" 
-id="brC" value="0.10" 
-step="0.01">
-</div>
-<div class="area">
-<canvas id="cv" 
-width="400" 
-height="300">
-</canvas>
-</div>
+<div class="container">
+    <h1>中和滴定シミュレータ</h1>
+    <div class="controls">
+        <div class="control-group full-width">
+            <label style="color: #2980b9;">🧪 実験パターンの選択</label>
+            <select id="titrationMode">
+                <option value="acid_by_base">酸を塩基で滴定する（ビーカー：酸 ／ ビュレット：塩基）</option>
+                <option value="base_by_acid">塩基を酸で滴定する（ビーカー：塩基 ／ ビュレット：酸）</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <h3 id="beakerTitle" style="font-size: 15px; margin: 0;">コニカルビーカーの中身</h3>
+            <label>溶液の強さ</label>
+            <select id="beakerType">
+                <option value="strong">強（HCl / NaOH）</option>
+                <option value="weak">弱（CH3COOH / NH3）</option>
+            </select>
+            <label>濃度 (mol/L)</label>
+            <input type="number" id="beakerConc" value="0.10" step="0.01" min="0.001" max="1.0">
+            <label>体積 (mL)</label>
+            <input type="number" id="beakerVol" value="10.0" step="0.5" min="1" max="50">
+        </div>
+        <div class="control-group">
+            <h3 id="buretTitle" style="font-size: 15px; margin: 0;">ビュレットの中身</h3>
+            <label>溶液の強さ</label>
+            <select id="buretType">
+                <option value="strong">強（NaOH / HCl）</option>
+                <option value="weak">弱（NH3 / CH3COOH）</option>
+            </select>
+            <label>濃度 (mol/L)</label>
+            <input type="number" id="buretConc" value="0.10" step="0.01" min="0.001" max="1.0">
+        </div>
+    </div>
+    <div class="chart-container">
+        <canvas id="titrationCanvas" width="600" height="400"></canvas>
+    </div>
 </div>
 <script>
-const maxV=25;
-function getpH(md,bkT,bkC,
-bkV,brT,brC,addV){
-const Ka=1.8e-5,Kb=1.8e-5;
-let nBk=bkC*(bkV/1000);
-let nBr=brC*(addV/1000);
-let tot=(parseFloat(bkV)+
-parseFloat(addV))/1000;
-if(md==='a_b'){
-if(bkT==='s'&&brT==='s'){
-if(nBk>nBr)return -
-Math.log10((nBk-nBr)/tot);
-if(nBr>nBk)return 14+
-Math.log10((nBr-nBk)/tot);
-return 7.0;}
-else if(bkT==='w'&&
-brT==='s'){
-if(addV===0)return -
-Math.log10(Math.sqrt(
-Ka*bkC));
-if(nBk>nBr){
-let s=nBr/tot,a=(nBk-nBr)/tot;
-return -Math.log10(Ka)+
-Math.log10(s/a);}
-if(nBr>nBk)return 14+
-Math.log10((nBr-nBk)/tot);
-return 7.0+0.5*(-
-Math.log10(Ka)+
-Math.log10(nBk/tot));}
-else{return nBk>nBr?
-3.0:11.0;}
-}else{
-if(bkT==='s'&&brT==='s'){
-if(nBk>nBr)return 14+
-Math.log10((nBk-nBr)/tot);
-if(nBr>nBk)return -
-Math.log10((nBr-nBk)/tot);
-return 7.0;}
-else if(bkT==='w'&&
-brT==='s'){
-if(addV===0)return 14-
-(-Math.log10(Math.sqrt(
-Kb*bkC)));
-if(nBk>nBr){
-let s=nBr/tot,b=(nBk-nBr)/tot;
-return 14-(-Math.log10(Kb)+
-Math.log10(s/b));}
-if(nBr>nBk)return -
-Math.log10((nBr-nBk)/tot);
-return 7.0-0.5*(-
-Math.log10(Kb)+
-Math.log10(nBk/tot));}
-else{return nBk>nBr?
-11.0:3.0;}}}
-function update(){
-const c=
-document.getElementById('cv');
-if(!c)return;
-const ctx=c.getContext('2d'),
-w=c.width,h=c.height;
-const pL=40,pR=15,pT=15,
-pB=30,gW=w-pL-pR,gH=h-pT-pB;
-const md=
-document.getElementById('mode').value;
-const bkT=
-document.getElementById('bkT').value;
-const bkC=parseFloat(
-document.getElementById('bkC').value)
-||0.1;
-const bkV=parseFloat(
-document.getElementById('bkV').value)
-||10;
-const brT=
-document.getElementById('brT').value;
-const brC=parseFloat(
-document.getElementById('brC').value)
-||0.1;
-ctx.clearRect(0,0,w,h);
-ctx.strokeStyle='#e8e8e8';
-ctx.lineWidth=1;
-ctx.font='12px sans-serif';
-for(let i=0;i<=14;i+=2){
-let y=pT+gH-(i/14)*gH;
-ctx.beginPath();
-ctx.moveTo(pL,y);
-ctx.lineTo(w-pR,y);
-ctx.stroke();
-ctx.fillStyle='#555';
-ctx.textAlign='right';
-ctx.fillText(i,pL-8,y+4);}
-for(let i=0;i<=maxV;i+=5){
-let x=pL+(i/maxV)*gW;
-ctx.beginPath();
-ctx.moveTo(x,pT);
-ctx.lineTo(x,h-pB);
-ctx.stroke();
-ctx.fillStyle='#555';
-ctx.textAlign='center';
-ctx.fillText(i+'m',x,
-h-pB+14);}
-ctx.strokeStyle='#e74c3c';
-ctx.lineWidth=3;
-ctx.beginPath();
-let first=true;
-for(let v=0;v<=maxV;v+=0.2){
-let ph=getpH(md,bkT,bkC,
-bkV,brT,brC,v);
-let x=pL+(v/maxV)*gW;
-let y=pT+gH-(ph/14)*gH;
-if(first){ctx.moveTo(x,y);
-first=false;}
-else{ctx.lineTo(x,y);}}
-ctx.stroke();}
-document.getElementById('mode')
-.addEventListener('change',
-function(){
-if(this.value==='a_b'){
-document.getElementById('bkTitle')
-.innerText="ビーカー（酸）";
-document.getElementById('brTitle')
-.innerText="ビュレット（塩基）";
-}else{
-document.getElementById('bkTitle')
-.innerText="ビーカー（塩基）";
-document.getElementById('brTitle')
-.innerText="ビュレット（酸）";
-}update();});
-document.querySelectorAll(
-'input,select').forEach(el=>{
-el.addEventListener('input',
-update);
-el.addEventListener('change',
-update);});
-window.onload=update;
+    const maxDrip = 25;
+    function calculateExactpH(mode, beakerType, beakerConc, beakerVol, buretType, buretConc, buretAddedVol) {
+        const Ka = 1.8e-5;
+        const Kb = 1.8e-5;
+        let n_beaker = beakerConc * (beakerVol / 1000);
+        let n_buret = buretConc * (buretAddedVol / 1000);
+        let totalVolL = (parseFloat(beakerVol) + parseFloat(buretAddedVol)) / 1000;
+        if (mode === 'acid_by_base') {
+            if (beakerType === 'strong' && buretType === 'strong') {
+                if (n_beaker > n_buret) return -Math.log10((n_beaker - n_buret) / totalVolL);
+                if (n_buret > n_beaker) return 14 + Math.log10((n_buret - n_beaker) / totalVolL);
+                return 7.0;
+            } else if (beakerType === 'weak' && buretType === 'strong') {
+                if (buretAddedVol === 0) return -Math.log10(Math.sqrt(Ka * beakerConc));
+                if (n_beaker > n_buret) {
+                    return -Math.log10(Ka) + Math.log10(n_buret / (n_beaker - n_buret));
+                } else if (n_buret > n_beaker) {
+                    return 14 + Math.log10((n_buret - n_beaker) / totalVolL);
+                }
+                return 7.0 + 0.5 * (-Math.log10(Ka) + Math.log10(n_beaker / totalVolL));
+            } else {
+                return n_beaker > n_buret ? 3.0 : 11.0;
+            }
+        } else {
+            if (beakerType === 'strong' && buretType === 'strong') {
+                if (n_beaker > n_buret) return 14 + Math.log10((n_beaker - n_buret) / totalVolL);
+                if (n_buret > n_beaker) return -Math.log10((n_buret - n_beaker) / totalVolL);
+                return 7.0;
+            } else if (beakerType === 'weak' && buretType === 'strong') {
+                if (buretAddedVol === 0) return 14 - (-Math.log10(Math.sqrt(Kb * beakerConc)));
+                if (n_beaker > n_buret) {
+                    return 14 - (-Math.log10(Kb) + Math.log10(n_buret / (n_beaker - n_buret)));
+                } else if (n_buret > n_beaker) {
+                    return -Math.log10((n_buret - n_beaker) / totalVolL);
+                }
+                return 7.0 - 0.5 * (-Math.log10(Kb) + Math.log10(n_beaker / totalVolL));
+            } else {
+                return n_beaker > n_buret ? 11.0 : 3.0;
+            }
+        }
+    }
+    function updateCurve() {
+        const canvas = document.getElementById('titrationCanvas'); if (!canvas) return;
+        const ctx = canvas.getContext('2d'), w = canvas.width, h = canvas.height;
+        const pL = 50, pR = 20, pT = 20, pB = 40, gW = w - pL - pR, gH = h - pT - pB;
+        const mode = document.getElementById('titrationMode').value;
+        const beakerType = document.getElementById('beakerType').value;
+        const beakerConc = parseFloat(document.getElementById('beakerConc').value) || 0.1;
+        const beakerVol = parseFloat(document.getElementById('beakerVol').value) || 10;
+        const buretType = document.getElementById('buretType').value;
+        const buretConc = parseFloat(document.getElementById('buretConc').value) || 0.1;
+        ctx.clearRect(0, 0, w, h);
+        ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 1; ctx.font = '14px sans-serif';
+        for (let i = 0; i <= 14; i += 2) {
+            let y = pT + gH - (i / 14) * gH;
+            ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(w - pR, y); ctx.stroke();
+            ctx.fillStyle = '#555'; ctx.textAlign = 'right'; ctx.fillText(i, pL - 10, y + 5);
+        }
+        for (let i = 0; i <= maxDrip; i += 5) {
+            let x = pL + (i / maxDrip) * gW;
+            ctx.beginPath(); ctx.moveTo(x, pT); ctx.lineTo(x, h - pB); ctx.stroke();
+            ctx.fillStyle = '#555'; ctx.textAlign = 'center'; ctx.fillText(i + ' mL', x, h - pB + 20);
+        }
+        ctx.strokeStyle = '#e74c3c'; ctx.lineWidth = 4; ctx.beginPath();
+        let isFirst = true;
+        for (let v = 0; v <= maxDrip; v += 0.1) {
+            let pH = calculateExactpH(mode, beakerType, beakerConc, beakerVol, buretType, buretConc, v);
+            let x = pL + (v / maxDrip) * gW, y = pT + gH - (pH / 14) * gH;
+            if (isFirst) { ctx.moveTo(x, y); isFirst = false; } else { ctx.lineTo(x, y); }
+        }
+        ctx.stroke();
+    }
+    document.getElementById('titrationMode').addEventListener('change', function() {
+        if (this.value === 'acid_by_base') {
+            document.getElementById('beakerTitle').innerText = "コニカルビーカーの中身（酸）";
+            document.getElementById('buretTitle').innerText = "ビュレットの中身（塩基）";
+        } else {
+            document.getElementById('beakerTitle').innerText = "コニカルビーカーの中身（塩基）";
+            document.getElementById('buretTitle').innerText = "ビレットの中身（酸）";
+        }
+        updateCurve();
+    });
+    document.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('input', updateCurve);
+        el.addEventListener('change', updateCurve);
+    });
+    window.onload = function() {
+        document.getElementById('titrationMode').dispatchEvent(new Event('change'));
+    };
 </script>
 </body>
-</html>
+</html>"""
+
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(html_code)
